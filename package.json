@@ -1,0 +1,26 @@
+{
+  "name": "@introspection/pi-codex-recipe",
+  "version": "0.1.0",
+  "description": "OpenAI Codex CLI harness reproduced as an Introspection (Pi) recipe — a pi-codex starter template.",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "pi": {
+    "agents": [
+      "./agents/*.yaml"
+    ],
+    "skills": [
+      "./skills/**/SKILL.md"
+    ],
+    "extensions": [
+      "./extensions/*.ts",
+      "./extensions/*/index.ts"
+    ]
+  }
+}
