@@ -10,6 +10,8 @@ tools:
   - apply_patch
   - update_plan
   - view_image
+skills: []
+subagents: []
 
 system_instructions:
   mode: append

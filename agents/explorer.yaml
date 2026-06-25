@@ -8,6 +8,8 @@ model:
 tools:
   - shell_command
   - view_image
+skills: []
+subagents: []
 
 system_instructions:
   mode: replace

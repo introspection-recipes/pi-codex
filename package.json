@@ -1,5 +1,5 @@
 {
-  "name": "@introspection/pi-codex-recipe",
+  "name": "@introspection-recipes/pi-codex",
   "version": "0.1.0",
   "description": "OpenAI Codex CLI harness reproduced as an Introspection (Pi) recipe — a pi-codex starter template.",
   "type": "module",
