@@ -5,6 +5,14 @@
   "type": "module",
   "private": true,
   "license": "Apache-2.0",
+  "scripts": {
+    "check": "recipes check . --profile ci",
+    "check:json": "recipes check . --profile ci --json",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "@introspection-ai/pi-recipes": "^0.2.0"
+  },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
     "@earendil-works/pi-ai": "*",
