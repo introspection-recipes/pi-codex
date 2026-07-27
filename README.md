@@ -10,33 +10,35 @@ Install Pi and the Recipes extension once per machine:
 pi install npm:@introspection-ai/recipes
 ```
 
-Then clone this template and run it:
+Then clone and run:
 
 ```bash
 git clone https://github.com/introspection-recipes/pi-codex
-pi --recipe ./pi-codex
+cd pi-codex
+npm install
+pi --recipe .
 ```
 
 ## Make it yours
 
-This is a directory, so change it like any other source. Nothing here is
-generated and nothing is hidden.
+This is an ordinary source directory. Nothing is generated or hidden.
 
 | Path | What it is |
 | --- | --- |
-| `SYSTEM.md` | instructions every agent in the package starts from |
-| `agents/agent.yaml` | the lead agent, and the agent you run |
-| `agents/*.yaml` | explorer, worker and review subagents |
-| `skills/skill-creator/` | a skill the agent loads on demand |
-| `extensions/` | extra tools written in TypeScript |
+| `SYSTEM.md` | instructions every agent starts from |
+| `agents/agent.yaml` | lead/default agent |
+| `agents/*.yaml` | explorer, worker, and review subagents |
+| `skills/skill-creator/` | on-demand skill authoring workflow |
+| `extensions/` | TypeScript tools |
+| `prompts/` | `/plan` and `/review` templates |
 
-Check your changes before you commit them:
+## Validate
 
 ```bash
-introspection check
+npm test
+npx -y -p @introspection-ai/cli introspection check
 ```
 
 ## Docs
 
-The format, the agent file, MCP policy and judges are documented at
-[pi.recipes/docs](https://pi.recipes/docs).
+[pi.recipes/docs](https://pi.recipes/docs)

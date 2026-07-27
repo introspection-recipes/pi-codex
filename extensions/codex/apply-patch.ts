@@ -1,8 +1,8 @@
 /**
  * Codex `apply_patch` tool.
  *
- * gpt-5.5 exposes apply_patch as a `freeform` tool whose body is the Codex
- * patch envelope. The Pi tool API is JSON-shaped, so we accept the same
+ * Codex exposes apply_patch as a `freeform` tool whose body is the Codex patch
+ * envelope. The Pi tool API is JSON-shaped, so we accept the same
  * envelope as a single `patch` string and parse it here.
  *
  * Envelope (codex-rs/prompts/templates/apply_patch_tool_instructions.md):

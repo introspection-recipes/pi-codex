@@ -2,30 +2,35 @@
  * codex — OpenAI Codex CLI tool surface as a Pi recipe extension.
  *
  * Pi auto-discovers this via the `extensions/*\/index.ts` glob and registers
- * the gpt-5.5 tool set at session start. gpt-5.5 (codex-rs models.json)
- * advertises `shell_type: "shell_command"` and `apply_patch_tool_type:
- * "freeform"`, so the surface is:
+ * the current Codex-style tool set at session start:
  *
- *   - shell_command   one-shot shell with timeout_ms
+ *   - exec_command    yielding command execution with reusable sessions
+ *   - write_stdin     input and polling for running sessions
  *   - apply_patch     Codex `*** Begin Patch / *** End Patch` envelope
  *   - update_plan     plan tracking with single in-progress invariant
  *   - view_image      load a local image for visual inspection
+ *   - request_user_input portable structured user interaction
  *
- * Web search (gpt-5.5 also supports it) lives in the separate, optional
- * extensions/web-search.ts so it can be dropped or reconfigured independently.
+ * Web search lives in the separate, optional extensions/web-search.ts so it
+ * can be dropped or reconfigured independently.
  */
 
 import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
-import { shellCommandTool } from "./shell.js";
 import { applyPatchTool } from "./apply-patch.js";
+import { requestUserInputTool } from "./request-user-input.js";
+import { createUnifiedExecTools } from "./unified-exec.js";
 import { updatePlanTool } from "./update-plan.js";
 import { viewImageTool } from "./view-image.js";
 
 const extension: ExtensionFactory = (pi) => {
-  pi.registerTool(shellCommandTool);
+  const exec = createUnifiedExecTools();
+  pi.registerTool(exec.execCommandTool);
+  pi.registerTool(exec.writeStdinTool);
   pi.registerTool(applyPatchTool);
   pi.registerTool(updatePlanTool);
   pi.registerTool(viewImageTool);
+  pi.registerTool(requestUserInputTool);
+  pi.on("session_shutdown", () => exec.closeAll());
 };
 
 export default extension;
