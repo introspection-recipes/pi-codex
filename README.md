@@ -2,12 +2,13 @@
 
 A starter template inspired by OpenAI Codex CLI.
 
-## Get started
+## Use this template
+
+Select **Use this template** on GitHub and create your repository. Then run:
 
 ```bash
 pi install npm:@introspection-ai/recipes
-git clone https://github.com/introspection-recipes/pi-codex
-cd pi-codex
+cd your-repository
 npm install
 pi --recipe .
 ```
