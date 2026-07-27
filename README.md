@@ -1,6 +1,6 @@
-# pi-codex
+# Codex Template
 
-A starting point for your coding agent, inspired by the OpenAI Codex CLI harness.
+A starter template inspired by OpenAI Codex CLI.
 
 ## Quickstart
 
