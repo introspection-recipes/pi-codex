@@ -1,9 +1,9 @@
 /**
  * Web search for the Codex recipe.
  *
- * gpt-5.5 supports a hosted `web_search` tool in the Codex CLI. That tool is
- * served by OpenAI's Responses API and is not available through the Pi
- * runtime, and Pi ships no native web search — so this extension provides a
+ * Codex supports a hosted `web_search` tool. That tool is served by OpenAI's
+ * Responses API and is not available through the Pi runtime, and Pi ships no
+ * native web search — so this extension provides a
  * `web_search` tool with the same name and a `query` parameter, backed by the
  * Parallel AI Search API (https://docs.parallel.ai). Requires PARALLEL_API_KEY.
  *

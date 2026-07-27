@@ -1,102 +1,109 @@
 # pi-codex Recipe
 
-A Git-backed Introspection (Pi) recipe that reproduces the **OpenAI Codex CLI** harness — system prompt, tools, subagents, and skills — as a runnable Pi coding agent. Use it as a starter template for building Codex-style agents on the Pi runtime.
+A Git-backed Introspection recipe that reproduces the current OpenAI Codex coding harness on Pi: GPT-5.6 models, persistent command sessions, patch editing, planning, structured user interaction, web search, skills, slash prompts, and delegated agents.
 
-It is a high-fidelity port of the [Codex CLI](https://github.com/openai/codex) harness (Apache-2.0): the base instructions are Codex's own `prompt.md`, and the tools (`shell_command`, `apply_patch`, `update_plan`, `view_image`) are re-implemented to match Codex's tool specs rather than mapped onto pi's built-ins.
+The recipe is a portable adaptation rather than a claim that Pi and Codex have identical host security boundaries. Codex's OS-enforced sandbox, approval escalation, hosted Browser Use, apps, plugins, automations, and hosted web search remain host capabilities; this package implements the coding behavior Pi can faithfully own.
 
-## What This Is
+## What ships
 
-An Introspection recipe is a package of runtime behavior. This repository contains:
+- `SYSTEM.md`: lean, outcome-first coding instructions with explicit autonomy, interaction, delegation, and validation boundaries.
+- `agents/*.yaml`: main, explorer, worker, and independent review roles.
+- `extensions/codex/`: Codex-style `exec_command`, `write_stdin`, `apply_patch`, `update_plan`, `view_image`, and `request_user_input` tools.
+- `extensions/web-search.ts`: optional Parallel-backed `web_search`.
+- `prompts/`: `/plan` and `/review` deliverable templates.
+- `skills/skill-creator/`: Codex's bundled skill-authoring workflow.
 
-- `.introspection/codex-agent.yaml`: the GitOps manifest Introspection discovers.
-- `SYSTEM.md`: the Codex CLI base instructions (verbatim, with a runtime-adapted "Sandbox and approvals" section).
-- `agents/agent.yaml`: the default runnable agent (the Codex main agent).
-- `agents/*.yaml`: subagents (`explorer`, `review`).
-- `skills/`: Codex's bundled `skill-creator` skill.
-- `extensions/`: the Codex tools, re-implemented for the Pi tool API.
+## Models
 
-When you create a runtime from this repo, Introspection reads the manifest, pins the selected git commit, and launches the default agent.
+The role mapping follows the GPT-5.6 family instead of applying one flagship model indiscriminately:
 
-## Model and fidelity
+| Agent | Model | Reasoning | Role |
+|---|---|---|---|
+| `agent` | `openai/gpt-5.6-sol` | medium | Main coding agent |
+| `explorer` | `openai/gpt-5.6-terra` | low | Fast read-only search |
+| `worker` | `openai/gpt-5.6-sol` | medium | Delegated implementation |
+| `review` | `openai/gpt-5.6-sol` | medium | Independent code review |
 
-The agent targets **`openai/gpt-5.5`** — Codex's default model (`codex-rs/models-manager/models.json`). The recipe mirrors exactly what gpt-5.5 advertises in the Codex catalog:
+## Tool mapping
 
-| gpt-5.5 catalog field | Value | What this recipe ships |
-|---|---|---|
-| base instructions | default `prompt.md` | `SYSTEM.md` (verbatim) |
-| `shell_type` | `shell_command` | `shell_command` tool (one-shot, `timeout_ms`) |
-| `apply_patch_tool_type` | `freeform` | `apply_patch` tool (patch envelope) |
-| `default_reasoning_level` | `medium` | `thinking_level: medium` |
-| `supports_search_tool` | `true` | optional `web_search` tool |
-| (always available) | `update_plan`, `view_image` | both ported |
-
-Older Codex model families (gpt-5.2-codex and the `exec_command`/`write_stdin` unified-exec surface) are intentionally **not** ported — this template tracks gpt-5.5.
-
-## How It Maps to Codex
-
-| Codex harness piece | Where it lives here |
+| Codex behavior | Recipe implementation |
 |---|---|
-| Base instructions (`models-manager/prompt.md`) | `SYSTEM.md` |
-| `shell_command` tool (`shell_spec.rs`) | `extensions/codex/shell.ts` |
-| `apply_patch` freeform tool (`apply_patch_tool_instructions.md`) | `extensions/codex/apply-patch.ts` |
-| `update_plan` tool (`plan_spec.rs`) | `extensions/codex/update-plan.ts` |
-| `view_image` tool (`view_image_spec.rs`) | `extensions/codex/view-image.ts` |
-| hosted `web_search` | `extensions/web-search.ts` (Parallel AI; optional) |
-| Review rubric (`review/rubric.md`) | `agents/review.yaml` |
-| Bundled `skill-creator` skill | `skills/skill-creator/` |
+| Yielding command execution | `extensions/codex/unified-exec.ts` → `exec_command` |
+| Continue or poll a process | `extensions/codex/unified-exec.ts` → `write_stdin` |
+| Patch-envelope edits | `extensions/codex/apply-patch.ts` → `apply_patch` |
+| Visible plan state | `extensions/codex/update-plan.ts` → `update_plan` |
+| Local image inspection | `extensions/codex/view-image.ts` → `view_image` |
+| Structured user questions | `extensions/codex/request-user-input.ts` → `request_user_input` |
+| Current web lookup | `extensions/web-search.ts` → `web_search` |
+| Parallel delegated work | Pi's generated `agent` tool from `subagents` |
 
-## Repository Layout
+`exec_command` returns quick command results directly. When a command remains active after `yield_time_ms`, it returns a `session_id`; `write_stdin` can then poll output or send characters. Setting `tty: true` allocates a PTY for interactive programs. Sessions are killed when the Pi session shuts down.
+
+The PTY backend uses `node-pty`. Its macOS prebuild includes a helper whose executable bit can be lost during installation, so `scripts/fix-node-pty-permissions.mjs` restores that bit in `postinstall`. Other platforms are unchanged.
+
+## Interactions
+
+`request_user_input` calls [`@introspection-ai/recipes/interactions`](https://pi.recipes/docs/interactions) and is always sequential. The same tool works in:
+
+- Pi terminal and RPC dialogs;
+- deterministic headless or CI mode;
+- durable hosts that set `PI_INTERRUPT_RESUME=1`, render `details.interrupt`, and resume the run later;
+- hosts without an interaction channel, where the result instructs the model to ask in its normal reply.
+
+The tool accepts exactly one question per call. One interrupt at a time is the portable Pi contract and prevents a paused parallel batch from stranding other tool calls. The root agent owns user interaction; delegated children route decisions back to it.
+
+## Delegation
+
+The main agent can start `explorer`, `worker`, and `review`. Pi's generated agent tool is asynchronous: a start returns a run id, and the lead can use `status`, `wait`, `message`, `interrupt`, and `close`. Labels distinguish concurrent runs of the same role.
+
+## Repository layout
 
 ```text
-.introspection/
-  codex-agent.yaml
+.introspection/codex-agent.yaml
 README.md
 SYSTEM.md
 package.json
-.env.example
 agents/
-  README.md
   agent.yaml
   explorer.yaml
+  worker.yaml
   review.yaml
-skills/
-  README.md
-  skill-creator/
-    SKILL.md
-    references/  scripts/  agents/  assets/
 extensions/
-  README.md
   codex/
     index.ts
-    shell.ts
+    unified-exec.ts
+    request-user-input.ts
     apply-patch.ts
     update-plan.ts
     view-image.ts
   web-search.ts
-  lib/
-    safe-path.ts
+prompts/
+  plan.md
+  review.md
+scripts/
+  fix-node-pty-permissions.mjs
+skills/
+  skill-creator/
+tests/
 ```
 
-## Customize
+## Run locally
 
-Edit these first:
-
-- `SYSTEM.md` for shared behavior and operating rules.
-- `agents/agent.yaml` for model, tools, subagents, and role instructions.
-- `agents/*.yaml` for subagent behavior and tool scoping.
-- `extensions/codex/*.ts` for tool implementations.
-- `extensions/web-search.ts` to enable or re-back web search (see `.env.example`).
-
-## Validating Locally
-
-CI validates every push with [`pi-recipes-action`](https://github.com/introspection-org/pi-recipes-action). To run the same check before each commit, enable the bundled pre-commit hook once after cloning:
+Install the Recipes extension once, then launch this directory:
 
 ```bash
-git config core.hooksPath .githooks   # or: npm install
+pi install npm:@introspection-ai/recipes
+npm install
+pi --recipe .
 ```
 
-Or run the check directly at any time:
+Configure optional web search through `.env.example`.
+
+## Validate
 
 ```bash
-npx -y -p @introspection-ai/pi-recipes@latest recipes check . --profile ci
+npm test
+npx -y -p @introspection-ai/recipes@latest recipes check . --profile ci
 ```
+
+CI runs the same recipe validation on pushes and pull requests.
