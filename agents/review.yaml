@@ -2,11 +2,12 @@ name: review
 description: Independent code review of a proposed change. Spawn after a non-trivial implementation with the diff or files touched; returns prioritized findings against the Codex review rubric.
 
 model:
-  name: openai/gpt-5.5
+  name: openai/gpt-5.6-sol
   thinking_level: medium
 
 tools:
-  - shell_command
+  - exec_command
+  - write_stdin
   - view_image
 skills: []
 subagents: []
@@ -14,7 +15,7 @@ subagents: []
 system_instructions:
   mode: replace
   content: |
-    You are acting as a reviewer for a proposed code change made by another engineer. You run in the Codex CLI on the Introspection (Pi) runtime. Use `shell_command` (read-only — `git diff`, `git show`, `rg`, `sed -n`, `cat`) to inspect the change and surrounding code. Do not edit the workspace.
+    You are acting as a reviewer for a proposed code change made by another engineer. You run in the Codex CLI on the Introspection (Pi) runtime. Use `exec_command` for read-only inspection (`git diff`, `git show`, `rg`, bounded `sed -n`) and `write_stdin` only to finish a yielded command. Do not edit the workspace.
 
     Below are some default guidelines for determining whether the original author would appreciate the issue being flagged.
 

@@ -1,44 +1,39 @@
 # Extensions
 
-Pi extensions loaded at runtime via the `pi.extensions` globs in `package.json`. An extension is a TypeScript module whose default export is an `ExtensionFactory` `(pi) => void`. It can register tools and subscribe to lifecycle events.
+The `pi.extensions` globs in `package.json` load these TypeScript modules for every root and delegated session. Registration is package-wide, while each agent's `tools` list remains the capability allowlist.
 
-This recipe re-implements Codex's tools against the Pi tool API rather than mapping them onto pi's built-ins — that's what makes the port high-fidelity.
+| Extension | Registers | Notes |
+|---|---|---|
+| `codex/index.ts` | Codex coding tools | Composes the tool definitions and cleans up process sessions on shutdown |
+| `codex/unified-exec.ts` | `exec_command`, `write_stdin` | Quick commands, yielded sessions, polling, stdin, PTY, cancellation, bounded output |
+| `codex/apply-patch.ts` | `apply_patch` | Atomic Codex patch envelope with workspace-confined paths |
+| `codex/update-plan.ts` | `update_plan` | Ordered plan with at most one in-progress item |
+| `codex/view-image.ts` | `view_image` | Local image content blocks |
+| `codex/request-user-input.ts` | `request_user_input` | Sequential, host-neutral questions through Recipes interactions |
+| `web-search.ts` | `web_search` | Optional Parallel AI search backend |
 
-| Extension | Registers | Source of truth in Codex |
-|-----------|-----------|--------------------------|
-| `codex/index.ts` | the gpt-5.5 tool set below | — |
-| `codex/shell.ts` | `shell_command` | `core/src/tools/handlers/shell_spec.rs` |
-| `codex/apply-patch.ts` | `apply_patch` | `prompts/templates/apply_patch_tool_instructions.md` |
-| `codex/update-plan.ts` | `update_plan` | `core/src/tools/handlers/plan_spec.rs` |
-| `codex/view-image.ts` | `view_image` | `core/src/tools/handlers/view_image_spec.rs` |
-| `web-search.ts` | `web_search` (optional) | hosted Responses `web_search` |
+## Persistent execution
 
-## Tools
+`exec_command` waits up to `yield_time_ms`. A completed command returns `exit_code`; a running command returns `session_id`. `write_stdin` accepts that id, optional characters, another yield window, and an output budget. Each result also carries a monotonic `chunk_id` and elapsed wall time.
 
-- **`shell_command`** — one-shot shell runner with `command`, `workdir`, `timeout_ms` (default 10000), and `login`. Combined stdout+stderr is truncated at standard Pi limits; large output spills to a temp file the agent can read back. This matches gpt-5.5's `shell_type: "shell_command"` — not the `exec_command`/`write_stdin` unified-exec pair other model families use.
-- **`apply_patch`** — accepts the Codex patch envelope (`*** Begin Patch` … `*** End Patch`) as a `patch` string and applies it atomically: every write is planned up front, and if any hunk fails the originals are restored. Paths are confined to the workspace.
-- **`update_plan`** — records an ordered plan with the single-`in_progress` invariant; the harness renders it.
-- **`view_image`** — loads a local image and returns it as an image content block.
+Plain commands use piped stdin/stdout/stderr. `tty: true` uses `node-pty` for terminal semantics. Output retained by a session is bounded, each tool response respects `max_output_tokens`, and every active process is killed during `session_shutdown`.
 
-There is intentionally **no** dedicated read/grep/find tool: like real Codex, the agent reads and searches through `shell_command` (`rg`, `sed -n`, `cat`).
+## User interaction
+
+`request_user_input` calls `askUserQuestion` from `@introspection-ai/recipes/interactions`, passes the tool's own abort signal, and sets `executionMode: "sequential"`. It therefore supports terminal/RPC dialogs, deterministic headless behavior, durable `PI_INTERRUPT_RESUME` interrupts, and the no-channel fallback without recipe-specific host code.
 
 ## Web search
 
-gpt-5.5 supports a hosted `web_search` tool in the Codex CLI, served by OpenAI's Responses API — unavailable through the Pi runtime, and Pi ships no native web search. `extensions/web-search.ts` provides a same-named `web_search` tool backed by the **Parallel AI Search API** (`POST https://api.parallel.ai/v1/search`, `x-api-key` auth). Configure via environment:
+`web_search` uses the Parallel AI Search API. Configure:
 
-| Env var | Purpose | Default |
+| Variable | Purpose | Default |
 |---|---|---|
-| `PARALLEL_API_KEY` | API key (required to enable `web_search`) | — |
-| `PARALLEL_SEARCH_PROCESSOR` | processor tier: `base` or `pro` | `base` |
-| `PARALLEL_SEARCH_MAX_RESULTS` | max results per search | `5` |
+| `PARALLEL_API_KEY` | Required API key | — |
+| `PARALLEL_SEARCH_PROCESSOR` | `base` or `pro` | `base` |
+| `PARALLEL_SEARCH_MAX_RESULTS` | Result count | `5` |
 
-If `PARALLEL_API_KEY` is unset, `web_search` returns an actionable error instead of failing silently. To swap backends, change the `execute` body — the tool name and `query` parameter stay the same. Remove `web_search` from `agents/agent.yaml` (and delete this file) if you don't want web access.
+Web search is separate because it is optional and provider-specific. Remove it from an agent's allowlist when the runtime should not expose it.
 
-## Hooks
+## Host boundaries
 
-Codex has two layers beyond its tools, and neither needs to be ported here:
-
-- **Configurable hooks** (`codex-hooks` crate) — external handlers keyed on `PreToolUse`, `PostToolUse`, `PermissionRequest`, `SessionStart`, `UserPromptSubmit`, `Stop`, `SubagentStart`/`SubagentStop`, and `Pre`/`PostCompact`, with `command` / `prompt` / `agent` handler types. **Codex ships none by default** — it's a user-extensibility mechanism configured in `config.toml`. The Pi equivalent is an event subscription via `pi.on(...)` inside an extension (`session_start`, `before_agent_start`, `tool_call`, `tool_result`, `turn_start` / `turn_end`, …). Drop a new `*.ts` file (or `<name>/index.ts`) here to add one.
-- **Reminders / injected context** (`codex-rs/core/src/context/`, the `ContextualUserFragment` family) — the per-turn context fragments Codex assembles. The defaults that matter are already provided natively by the Pi runtime: the working-directory / environment block (Codex's `<environment_context>`), the `<available_skills>` listing, AGENTS.md project instructions (`user_instructions`), and the current time. The rest are either Codex-runtime-specific (sandbox/approval permission profiles, token/rollout budgets, plugins/apps, guardian, realtime) or off-by-default feature/mode fragments — none apply to the gpt-5.5 surface this recipe targets.
-
-So this recipe adds no hooks or reminder extensions: doing so would either duplicate what Pi already injects or reproduce Codex internals that don't exist on Pi.
+Extensions execute with the Pi process's authority. Tool selection is not filesystem, network, or OS isolation. Hosts should supply sandboxing, credentials, uploaded files, telemetry, hosted browsers, apps, or MCP connections rather than embedding those non-portable resources in this package.

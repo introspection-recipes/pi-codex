@@ -1,5 +1,5 @@
 name: codex-agent
 path: .
-description: OpenAI Codex CLI harness as a Pi recipe (pi-codex starter template)
+description: GPT-5.6 Codex coding harness as a Pi recipe with interactions and persistent exec
 runtime:
   llm_mode: managed

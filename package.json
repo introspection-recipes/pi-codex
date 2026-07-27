@@ -6,13 +6,16 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks || true"
+    "postinstall": "node scripts/fix-node-pty-permissions.mjs",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
-  "peerDependencies": {
-    "@earendil-works/pi-agent-core": "*",
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "typebox": "*"
+  "dependencies": {
+    "@introspection-ai/recipes": "^0.14.1",
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   },
   "pi": {
     "agents": [
@@ -20,6 +23,10 @@
     ],
     "skills": [
       "./skills/**/SKILL.md"
+    ],
+    "prompts": [
+      "./prompts/plan.md",
+      "./prompts/review.md"
     ],
     "extensions": [
       "./extensions/*.ts",
