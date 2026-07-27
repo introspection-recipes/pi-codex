@@ -1,44 +1,24 @@
-# pi-codex
+# Codex Template
 
-A starting point for your coding agent, inspired by the OpenAI Codex CLI harness.
+A starter template inspired by OpenAI Codex CLI.
 
-## Quickstart
+## Quick Start
 
-Install Pi and the Recipes extension once per machine:
+Click **Use this template** above to create your repository, then run:
 
 ```bash
 pi install npm:@introspection-ai/recipes
-```
-
-Then clone and run:
-
-```bash
-git clone https://github.com/introspection-recipes/pi-codex
-cd pi-codex
+cd your-repository
 npm install
 pi --recipe .
 ```
 
-## Make it yours
+Set `PARALLEL_API_KEY` to enable web search.
 
-This is an ordinary source directory. Nothing is generated or hidden.
+## What's Included
 
-| Path | What it is |
-| --- | --- |
-| `SYSTEM.md` | instructions every agent starts from |
-| `agents/agent.yaml` | lead/default agent |
-| `agents/*.yaml` | explorer, worker, and review subagents |
-| `skills/skill-creator/` | on-demand skill authoring workflow |
-| `extensions/` | TypeScript tools |
-| `prompts/` | `/plan` and `/review` templates |
+- A lead agent with explorer, worker, and review subagents
+- Codex-style execution, patching, planning, and interaction tools
+- `/plan` and `/review` prompts
 
-## Validate
-
-```bash
-npm test
-npx -y -p @introspection-ai/cli introspection check
-```
-
-## Docs
-
-[pi.recipes/docs](https://pi.recipes/docs)
+[Read the Recipes documentation →](https://pi.recipes/docs)
