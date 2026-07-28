@@ -22,7 +22,6 @@ export PARALLEL_API_KEY=your-key
 Validate the recipe, run its extension tests, and start a fresh local Pi session:
 
 ```bash
-introspection check
 npm test
 introspection local --runtime codex-agent
 ```
@@ -43,7 +42,7 @@ Local Pi → Development → Staging → Production → Learn and repeat
 
 ### 1. Change and prove it locally
 
-Customize `SYSTEM.md`, the definitions under `agents/`, the tools under `extensions/`, the prompts under `prompts/`, or the reusable workflows under `skills/`. Repeat `introspection check`, `npm test`, and the local prompt above in fresh sessions. Exercise any command-session, interaction, editing, or delegation behavior you changed.
+Customize `SYSTEM.md`, the definitions under `agents/`, the tools under `extensions/`, the prompts under `prompts/`, or the reusable workflows under `skills/`. Repeat `npm test` and the local prompt above in fresh sessions. Exercise any command-session, interaction, editing, or delegation behavior you changed.
 
 ### 2. Create the runtime and test development
 
